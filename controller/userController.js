@@ -1,4 +1,6 @@
 const User = require("../model/userModel")
+const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
 
 const register = async (req, res) => {
     //destructuring the form data or raw data
@@ -16,17 +18,32 @@ const register = async (req, res) => {
         if(existingEmail) {
             return res.status(400).json({
                 success: false,
-                message: "User already exist"
+                message: "Email already exist"
             });
         }
 
+        const hashedPassword = await bcrypt.hash(password, 10)
+
         const user = new User ({
-            firstName, lastName, email, password
+            firstName, 
+            lastName, 
+            email, 
+            password: hashedPassword
         });
         await user.save();
+        const token = jwt.sign({
+            _id: user._id,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            email: user.email,
+            isAdmin: user.isAdmin
+        }, process.env.JWT_SECRET, {expiresIn: "1d"})
+        
         return res.status(201).json({
                 success: true,
-                message: "User Registered Successfully.!!"
+                message: "User Registered Successfully.!!",
+                token,
+                user
             });
     } catch (error) {
         return res.status(500).json({
